@@ -1,0 +1,55 @@
+# -*- coding:utf-8 -*-
+import numpy as np
+import pandas as pd
+from collections import Counter
+import operator
+dataset=pd.read_csv('D:\\workspace\\alimama\\data\\dataSet1.csv')
+label=pd.read_csv('D:\\workspace\\alimama\\data\\label1.csv')
+
+'''
+将每个商品类型按逗号分割成类型1，类型2，类型3，与用户查询类型取交集
+'''
+def merge(x, y):
+    tmp = []
+    for i in range(len(x)):
+        if x[i] in y:
+            tmp.append(x[i])
+        else:
+            tmp.append(0)
+    if len(tmp) == 3:
+        return tmp
+    elif len(tmp) == 2:
+        return tmp + [0]
+    elif len(tmp) == 1:
+        return tmp + [0, 0]
+    else:
+        return [0, 0, 0]
+
+
+
+
+def extract_category_property(df):
+    predict_category = df['predict_category_property'].map(lambda x: [v.split(':')[0] for v in x.split(';')])
+    category_list = df['item_category_list'].map(lambda x: x.split(';'))
+    train_category_join = category_list.combine(predict_category, lambda x, y: merge(x, y))
+    # print(train_category_join)
+    train_category_join_first = train_category_join.map(lambda x: x[0])
+    train_category_join_second = train_category_join.map(lambda x: x[1])
+    train_category_join_third = train_category_join.map(lambda x: x[2])
+    df['category_join_first'] = train_category_join_first
+    df['category_join_second'] = train_category_join_second
+    df['category_join_third'] = train_category_join_third
+    df.drop(['predict_category_property', 'item_category_list', 'item_property_list'], axis=1, inplace=True)
+    return df
+
+
+
+
+dataset=extract_category_property(dataset)
+label=extract_category_property(label)
+
+dataset.to_csv('D:\\workspace\\alimama\\data\\dataSet1.csv',index=False)
+label.to_csv('D:\\workspace\\alimama\\data\\label1.csv',index=False)
+
+
+
