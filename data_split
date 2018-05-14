@@ -1,0 +1,32 @@
+import pandas as pd
+alimama_train_path='data/new_round1_ijcai_18_train_20180301.txt'
+alimama_test_path='data/new_round1_ijcai_18_test_a_20180301.txt'
+
+#读数据：
+train=pd.read_table(alimama_train_path,sep=' ')
+test=pd.read_table(alimama_test_path,sep=' ')
+# print(test.day)
+
+#按时间戳划分数据集：
+train1=train[(train.day<=4)]
+test1=train[(train.day==5)]
+train2=train[(train.day>=2)&(train.day<=5)]
+test2=train[(train.day==6)]
+train4=train[(train.day>=3)&(train.day<=6)]
+test4=train[(train.day==7)]
+train5=train[(train.day>=4)&(train.day<=7)]
+test5=train[(train.day==31)]
+train3=train
+test3=test
+# print(train3.shop_score_description)
+
+train1.to_csv('data/dataSet11.csv')
+train2.to_csv('data/dataSet21.csv')
+train3.to_csv('data/dataSet31.csv')
+train4.to_csv('data/dataSet41.csv')
+train5.to_csv('data/dataSet51.csv')
+test1.to_csv('data/label11.csv')
+test2.to_csv('data/label21.csv')
+test3.to_csv('data/label31.csv')
+test4.to_csv('data/label41.csv')
+test5.to_csv('data/label51.csv')
