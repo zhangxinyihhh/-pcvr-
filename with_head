@@ -1,0 +1,12 @@
+import pandas as pd
+result_fin=pd.read_csv('D:\\workspace\\alimama\\data\\round1_ijcai_18_test_b_20180418.txt',sep=" ")#这个是为了与文件中instance_id一致
+
+result=pd.read_csv('D:\\workspace\\alimama\\xgb_preds1.csv',header=None)  #这个是之前保存的文件，你加了表头的话就不要加colmns了
+# result=pd.read_csv('D:\\workspace\\alimama\\xgbc_submission.csv',header=None)
+
+result.columns=['instance_id','predicted_score']
+
+result1=result_fin[['instance_id']]
+result=pd.merge(result1,result,on='instance_id',how='left')
+result.to_csv('D:\\workspace\\alimama\\xgb_withhead35.csv',index=False,sep=" ")
+# result.to_csv('D:\\workspace\\alimama\\xgbxgbc_merge_withhead1.csv',index=False,sep=" ")
