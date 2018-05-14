@@ -1,0 +1,282 @@
+# -*- coding:utf-8 -*-
+import numpy as np
+import pandas as pd
+from collections import Counter
+import operator
+dataset=pd.read_csv('D:\\workspace\\alimama\\data\\dataSet5.csv')
+label=pd.read_csv('D:\\workspace\\alimama\\data\\label5.csv')
+# print(dataset.info())
+# print(label.info())
+
+'''
+清洗所有数据  注意将dataset 与label依次改成1 2 3 4 5 
+'''
+
+
+dataset=dataset[['instance_id','item_id','item_brand_id','item_city_id','item_price_level','item_sales_level','item_collected_level','item_pv_level','user_id','user_gender_id','user_age_level','user_occupation_id','user_star_level','context_id','context_timestamp','context_page_id','shop_id','shop_review_num_level','shop_review_positive_rate','shop_star_level','shop_score_service','shop_score_delivery','shop_score_description','is_trade','day','hour','category_join_first','category_join_second','category_join_third','category_in_predict_rate','category_in_predict_count','property_in_predict_rate','property_in_predict_count']].replace(-1,np.nan)
+label=label[['instance_id','item_id','is_trade','item_brand_id','item_city_id','item_price_level','item_sales_level','item_collected_level','item_pv_level','user_id','user_gender_id','user_age_level','user_occupation_id','user_star_level','context_id','context_timestamp','context_page_id','shop_id','shop_review_num_level','shop_review_positive_rate','shop_star_level','shop_score_service','shop_score_delivery','shop_score_description','day','hour','category_join_first','category_join_second','category_join_third','category_in_predict_rate','category_in_predict_count','property_in_predict_rate','property_in_predict_count']].replace(-1,np.nan)
+
+dataset=dataset.drop_duplicates()
+label=label.drop_duplicates()
+
+#简单填充：
+dataset.item_brand_id=dataset.item_brand_id.fillna(dataset.item_brand_id.dropna().value_counts().reset_index().ix[0,0])
+dataset.item_sales_level=dataset.item_sales_level.fillna(dataset.item_sales_level.dropna().value_counts().reset_index().ix[0,0])
+dataset.item_city_id=dataset.item_city_id.fillna(dataset.item_city_id.dropna().value_counts().reset_index().ix[0,0])
+label.item_brand_id=label.item_brand_id.fillna(label.item_brand_id.dropna().value_counts().reset_index().ix[0,0])
+label.item_sales_level=label.item_sales_level.fillna(label.item_sales_level.dropna().value_counts().reset_index().ix[0,0])
+label.item_city_id=label.item_city_id.fillna(label.item_city_id.dropna().value_counts().reset_index().ix[0,0])
+dataset.user_gender_id=dataset.user_gender_id.fillna(0)
+dataset.user_age_level=dataset.user_age_level.fillna(dataset.user_age_level.dropna().value_counts().reset_index().ix[0,0])
+dataset.user_occupation_id=dataset.user_occupation_id.fillna(dataset.user_occupation_id.dropna().value_counts().reset_index().ix[0,0])
+dataset.user_star_level=dataset.user_star_level.fillna(dataset.user_star_level.dropna().value_counts().reset_index().ix[0,0])
+label.user_gender_id=label.user_gender_id.fillna(0)
+label.user_age_level=label.user_age_level.fillna(dataset.user_age_level.dropna().value_counts().reset_index().ix[0,0])
+label.user_occupation_id=label.user_occupation_id.fillna(dataset.user_occupation_id.dropna().value_counts().reset_index().ix[0,0])
+label.user_star_level=label.user_star_level.fillna(dataset.user_star_level.dropna().value_counts().reset_index().ix[0,0])
+
+dataset.shop_review_positive_rate=dataset.shop_review_positive_rate.fillna(dataset.shop_review_positive_rate.dropna().value_counts().reset_index().ix[0,0])
+dataset.shop_score_delivery=dataset.shop_score_delivery.fillna(dataset.shop_review_positive_rate.dropna().value_counts().reset_index().ix[0,0])
+dataset.shop_score_service=dataset.shop_score_service.fillna(dataset.shop_review_positive_rate.dropna().value_counts().reset_index().ix[0,0])
+dataset.shop_score_description=dataset.shop_score_description.fillna(dataset.shop_review_positive_rate.dropna().value_counts().reset_index().ix[0,0])
+label.shop_review_positive_rate=label.shop_review_positive_rate.fillna(label.shop_review_positive_rate.dropna().value_counts().reset_index().ix[0,0])
+label.shop_score_service=label.shop_score_service.fillna(label.shop_review_positive_rate.dropna().value_counts().reset_index().ix[0,0])
+label.shop_score_delivery=label.shop_score_delivery.fillna(label.shop_score_delivery.dropna().value_counts().reset_index().ix[0,0])
+label.shop_score_description=label.shop_score_description.fillna(label.shop_score_description.dropna().value_counts().reset_index().ix[0,0])
+
+dataset = dataset.drop_duplicates(subset='instance_id')
+label=label.drop_duplicates(subset='instance_id')
+
+
+def data_correct1(x):
+    x=x.split(':')
+    if len(x)<=2:
+        return x[0]
+    else:
+        a = dict(Counter(x))
+        b = sorted(a.items(), key=operator.itemgetter(1), reverse=True)
+        return b[0][0]
+
+t31=dataset[['item_id','item_brand_id']]
+t31.item_brand_id=t31.item_brand_id.astype('str')
+t31=t31.groupby('item_id')['item_brand_id'].agg(lambda x:':'.join(x)).reset_index()
+t31.item_brand_id=t31.item_brand_id.apply(data_correct1)
+t32=dataset[['item_id','item_city_id']]
+t32.item_city_id=t32.item_city_id.astype('str')
+t32=t32.groupby('item_id')['item_city_id'].agg(lambda x:':'.join(x)).reset_index()
+t32.item_city_id=t32.item_city_id.apply(data_correct1)
+t33=dataset[['item_id','item_price_level']]
+t33.item_price_level=t33.item_price_level.astype('str')
+t33=t33.groupby('item_id')['item_price_level'].agg(lambda x:':'.join(x)).reset_index()
+t33.item_price_level=t33.item_price_level.apply(data_correct1)
+t34=dataset[['item_id','item_sales_level']]
+t34.item_sales_level=t34.item_sales_level.astype('str')
+t34=t34.groupby('item_id')['item_sales_level'].agg(lambda x:':'.join(x)).reset_index()
+t34.item_sales_level=t34.item_sales_level.apply(data_correct1)
+t35=dataset[['item_id','item_collected_level']]
+t35.item_collected_level=t35.item_collected_level.astype('str')
+t35=t35.groupby('item_id')['item_collected_level'].agg(lambda x:':'.join(x)).reset_index()
+t35.item_collected_level=t35.item_collected_level.apply(data_correct1)
+t36=dataset[['item_id','item_pv_level']]
+t36.item_pv_level=t36.item_pv_level.astype('str')
+t36=t36.groupby('item_id')['item_pv_level'].agg(lambda x:':'.join(x)).reset_index()
+t36.item_pv_level=t36.item_pv_level.apply(data_correct1)
+
+
+
+dataset=dataset.drop(['item_brand_id','item_city_id','item_price_level','item_sales_level','item_collected_level','item_pv_level'],axis=1)
+dataset=pd.merge(dataset,t31,on='item_id',how='left')
+dataset=pd.merge(dataset,t32,on='item_id',how='left')
+dataset=pd.merge(dataset,t33,on='item_id',how='left')
+dataset=pd.merge(dataset,t34,on='item_id',how='left')
+dataset=pd.merge(dataset,t35,on='item_id',how='left')
+dataset=pd.merge(dataset,t36,on='item_id',how='left')
+
+t41=label[['item_id','item_brand_id']]
+t41.item_brand_id=t41.item_brand_id.astype('str')
+t41=t41.groupby('item_id')['item_brand_id'].agg(lambda x:':'.join(x)).reset_index()
+t41.item_brand_id=t41.item_brand_id.apply(data_correct1)
+t42=label[['item_id','item_city_id']]
+t42.item_city_id=t42.item_city_id.astype('str')
+t42=t42.groupby('item_id')['item_city_id'].agg(lambda x:':'.join(x)).reset_index()
+t42.item_city_id=t42.item_city_id.apply(data_correct1)
+t43=label[['item_id','item_price_level']]
+t43.item_price_level=t43.item_price_level.astype('str')
+t43=t43.groupby('item_id')['item_price_level'].agg(lambda x:':'.join(x)).reset_index()
+t43.item_price_level=t43.item_price_level.apply(data_correct1)
+t44=label[['item_id','item_sales_level']]
+t44.item_sales_level=t44.item_sales_level.astype('str')
+t44=t44.groupby('item_id')['item_sales_level'].agg(lambda x:':'.join(x)).reset_index()
+t44.item_sales_level=t44.item_sales_level.apply(data_correct1)
+t45=label[['item_id','item_collected_level']]
+t45.item_collected_level=t45.item_collected_level.astype('str')
+t45=t45.groupby('item_id')['item_collected_level'].agg(lambda x:':'.join(x)).reset_index()
+t45.item_collected_level=t45.item_collected_level.apply(data_correct1)
+t46=label[['item_id','item_pv_level']]
+t46.item_pv_level=t46.item_pv_level.astype('str')
+t46=t46.groupby('item_id')['item_pv_level'].agg(lambda x:':'.join(x)).reset_index()
+t46.item_pv_level=t46.item_pv_level.apply(data_correct1)
+
+label=label.drop(['item_brand_id','item_city_id','item_price_level','item_sales_level','item_collected_level','item_pv_level'],axis=1)
+label=pd.merge(label,t41,on='item_id',how='left')
+label=pd.merge(label,t42,on='item_id',how='left')
+label=pd.merge(label,t43,on='item_id',how='left')
+label=pd.merge(label,t44,on='item_id',how='left')
+label=pd.merge(label,t45,on='item_id',how='left')
+label=pd.merge(label,t46,on='item_id',how='left')
+
+
+t11=dataset[['user_id','user_gender_id']]
+t11.user_gender_id=t11.user_gender_id.astype('str')
+t11=t11.groupby('user_id')['user_gender_id'].agg(lambda x:':'.join(x)).reset_index()
+t11.user_gender_id=t11.user_gender_id.apply(data_correct1)
+t12=dataset[['user_id','user_age_level']]
+t12.user_age_level=t12.user_age_level.astype('str')
+t12=t12.groupby('user_id')['user_age_level'].agg(lambda x:':'.join(x)).reset_index()
+t12.user_age_level=t12.user_age_level.apply(data_correct1)
+t13=dataset[['user_id','user_occupation_id']]
+t13.user_occupation_id=t13.user_occupation_id.astype('str')
+t13=t13.groupby('user_id')['user_occupation_id'].agg(lambda x:':'.join(x)).reset_index()
+t13.user_occupation_id=t13.user_occupation_id.apply(data_correct1)
+t14=dataset[['user_id','user_star_level']]
+t14.user_star_level=t14.user_star_level.astype('str')
+t14=t14.groupby('user_id')['user_star_level'].agg(lambda x:':'.join(x)).reset_index()
+t14.user_star_level=t14.user_star_level.apply(data_correct1)
+
+dataset=dataset.drop(['user_gender_id','user_age_level','user_occupation_id','user_star_level'],axis=1)
+dataset=pd.merge(dataset,t11,on='user_id',how='left')
+dataset=pd.merge(dataset,t12,on='user_id',how='left')
+dataset=pd.merge(dataset,t13,on='user_id',how='left')
+dataset=pd.merge(dataset,t14,on='user_id',how='left')
+
+
+t1=label[['user_id','user_gender_id']]
+t1.user_gender_id=t1.user_gender_id.astype('str')
+t1=t1.groupby('user_id')['user_gender_id'].agg(lambda x:':'.join(x)).reset_index()
+t1.user_gender_id=t1.user_gender_id.apply(data_correct1)
+t2=label[['user_id','user_age_level']]
+t2.user_age_level=t2.user_age_level.astype('str')
+t2=t2.groupby('user_id')['user_age_level'].agg(lambda x:':'.join(x)).reset_index()
+t2.user_age_level=t2.user_age_level.apply(data_correct1)
+t3=label[['user_id','user_occupation_id']]
+t3.user_occupation_id=t3.user_occupation_id.astype('str')
+t3=t3.groupby('user_id')['user_occupation_id'].agg(lambda x:':'.join(x)).reset_index()
+t3.user_occupation_id=t3.user_occupation_id.apply(data_correct1)
+t4=label[['user_id','user_star_level']]
+t4.user_star_level=t4.user_star_level.astype('str')
+t4=t4.groupby('user_id')['user_star_level'].agg(lambda x:':'.join(x)).reset_index()
+t4.user_star_level=t4.user_star_level.apply(data_correct1)
+
+label=label.drop(['user_gender_id','user_age_level','user_occupation_id','user_star_level'],axis=1)
+label=pd.merge(label,t1,on='user_id',how='left')
+label=pd.merge(label,t2,on='user_id',how='left')
+label=pd.merge(label,t3,on='user_id',how='left')
+label=pd.merge(label,t4,on='user_id',how='left')
+
+t51=dataset[['shop_id','shop_review_num_level']]
+t51.shop_review_num_level=t51.shop_review_num_level.astype('str')
+t51=t51.groupby('shop_id')['shop_review_num_level'].agg(lambda x:':'.join(x)).reset_index()
+t51.shop_review_num_level=t51.shop_review_num_level.apply(data_correct1)
+t52=dataset[['shop_id','shop_review_positive_rate']]
+t52.shop_review_positive_rate=t52.shop_review_positive_rate.astype('str')
+t52=t52.groupby('shop_id')['shop_review_positive_rate'].agg(lambda x:':'.join(x)).reset_index()
+t52.shop_review_positive_rate=t52.shop_review_positive_rate.apply(data_correct1)
+t53=dataset[['shop_id','shop_star_level']]
+t53.shop_star_level=t53.shop_star_level.astype('str')
+t53=t53.groupby('shop_id')['shop_star_level'].agg(lambda x:':'.join(x)).reset_index()
+t53.shop_star_level=t53.shop_star_level.apply(data_correct1)
+t54=dataset[['shop_id','shop_score_service']]
+t54.shop_score_service=t54.shop_score_service.astype('str')
+t54=t54.groupby('shop_id')['shop_score_service'].agg(lambda x:':'.join(x)).reset_index()
+t54.shop_score_service=t54.shop_score_service.apply(data_correct1)
+t55=dataset[['shop_id','shop_score_delivery']]
+t55.shop_score_delivery=t55.shop_score_delivery.astype('str')
+t55=t55.groupby('shop_id')['shop_score_delivery'].agg(lambda x:':'.join(x)).reset_index()
+t55.shop_score_delivery=t55.shop_score_delivery.apply(data_correct1)
+t56=dataset[['shop_id','shop_score_description']]
+t56.shop_score_description=t56.shop_score_description.astype('str')
+t56=t56.groupby('shop_id')['shop_score_description'].agg(lambda x:':'.join(x)).reset_index()
+t56.shop_score_description=t56.shop_score_description.apply(data_correct1)
+
+dataset=dataset.drop(['shop_review_num_level','shop_review_positive_rate','shop_star_level','shop_score_service','shop_score_delivery','shop_score_description'],axis=1)
+dataset=pd.merge(dataset,t51,on='shop_id',how='left')
+dataset=pd.merge(dataset,t52,on='shop_id',how='left')
+dataset=pd.merge(dataset,t53,on='shop_id',how='left')
+dataset=pd.merge(dataset,t54,on='shop_id',how='left')
+dataset=pd.merge(dataset,t55,on='shop_id',how='left')
+dataset=pd.merge(dataset,t56,on='shop_id',how='left')
+
+t61=label[['shop_id','shop_review_num_level']]
+t61.shop_review_num_level=t61.shop_review_num_level.astype('str')
+t61=t61.groupby('shop_id')['shop_review_num_level'].agg(lambda x:':'.join(x)).reset_index()
+t61.shop_review_num_level=t61.shop_review_num_level.apply(data_correct1)
+t62=label[['shop_id','shop_review_positive_rate']]
+t62.shop_review_positive_rate=t62.shop_review_positive_rate.astype('str')
+t62=t62.groupby('shop_id')['shop_review_positive_rate'].agg(lambda x:':'.join(x)).reset_index()
+t62.shop_review_positive_rate=t62.shop_review_positive_rate.apply(data_correct1)
+t63=label[['shop_id','shop_star_level']]
+t63.shop_star_level=t63.shop_star_level.astype('str')
+t63=t63.groupby('shop_id')['shop_star_level'].agg(lambda x:':'.join(x)).reset_index()
+t63.shop_star_level=t63.shop_star_level.apply(data_correct1)
+t64=label[['shop_id','shop_score_service']]
+t64.shop_score_service=t64.shop_score_service.astype('str')
+t64=t64.groupby('shop_id')['shop_score_service'].agg(lambda x:':'.join(x)).reset_index()
+t64.shop_score_service=t64.shop_score_service.apply(data_correct1)
+t65=label[['shop_id','shop_score_delivery']]
+t65.shop_score_delivery=t65.shop_score_delivery.astype('str')
+t65=t65.groupby('shop_id')['shop_score_delivery'].agg(lambda x:':'.join(x)).reset_index()
+t65.shop_score_delivery=t65.shop_score_delivery.apply(data_correct1)
+t66=label[['shop_id','shop_score_description']]
+t66.shop_score_description=t66.shop_score_description.astype('str')
+t66=t66.groupby('shop_id')['shop_score_description'].agg(lambda x:':'.join(x)).reset_index()
+t66.shop_score_description=t66.shop_score_description.apply(data_correct1)
+
+label=label.drop(['shop_review_num_level','shop_review_positive_rate','shop_star_level','shop_score_service','shop_score_delivery','shop_score_description'],axis=1)
+label=pd.merge(label,t61,on='shop_id',how='left')
+label=pd.merge(label,t62,on='shop_id',how='left')
+label=pd.merge(label,t63,on='shop_id',how='left')
+label=pd.merge(label,t64,on='shop_id',how='left')
+label=pd.merge(label,t65,on='shop_id',how='left')
+label=pd.merge(label,t66,on='shop_id',how='left')
+
+
+t71=dataset[['context_id','context_page_id']]
+t71.context_page_id=t71.context_page_id.astype('str')
+t71=t71.groupby('context_id')['context_page_id'].agg(lambda x:':'.join(x)).reset_index()
+t71.context_page_id=t71.context_page_id.apply(data_correct1)
+t72=dataset[['context_id','day']]
+t72.day=t72.day.astype('str')
+t72=t72.groupby('context_id')['day'].agg(lambda x:':'.join(x)).reset_index()
+t72.day=t72.day.apply(data_correct1)
+t73=dataset[['context_id','hour']]
+t73.hour=t73.hour.astype('str')
+t73=t73.groupby('context_id')['hour'].agg(lambda x:':'.join(x)).reset_index()
+t73.hour=t73.hour.apply(data_correct1)
+
+
+dataset=dataset.drop(['context_page_id','day','hour'],axis=1)
+dataset=pd.merge(dataset,t71,on='context_id',how='left')
+dataset=pd.merge(dataset,t72,on='context_id',how='left')
+dataset=pd.merge(dataset,t73,on='context_id',how='left')
+
+t81=label[['context_id','context_page_id']]
+t81.context_page_id=t81.context_page_id.astype('str')
+t81=t81.groupby('context_id')['context_page_id'].agg(lambda x:':'.join(x)).reset_index()
+t81.context_page_id=t81.context_page_id.apply(data_correct1)
+t82=label[['context_id','day']]
+t82.day=t82.day.astype('str')
+t82=t82.groupby('context_id')['day'].agg(lambda x:':'.join(x)).reset_index()
+t82.day=t82.day.apply(data_correct1)
+t83=label[['context_id','hour']]
+t83.hour=t83.hour.astype('str')
+t83=t83.groupby('context_id')['hour'].agg(lambda x:':'.join(x)).reset_index()
+t83.hour=t83.hour.apply(data_correct1)
+
+
+label=label.drop(['context_page_id','day','hour'],axis=1)
+label=pd.merge(label,t81,on='context_id',how='left')
+label=pd.merge(label,t82,on='context_id',how='left')
+label=pd.merge(label,t83,on='context_id',how='left')
+
+dataset.to_csv('D:\\workspace\\alimama\\data\\dataSet5.csv',index=False)
+label.to_csv('D:\\workspace\\alimama\\data\\label5.csv',index=False)
