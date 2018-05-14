@@ -1,0 +1,77 @@
+# -*- coding:utf-8 -*-
+import pandas as pd
+dataset=pd.read_csv('D:\\workspace\\alimama\\data\\dataSet1.csv')
+label=pd.read_csv('D:\\workspace\\alimama\\data\\label1.csv')
+'''
+将dataset，label，依次改为2 3 4 5 并运行
+作用：清洗商品属性，并与用户查询属性取交集
+
+'''
+
+
+
+def correct_extract(x):
+    temp=[]
+    for p in x:
+        for q in p:
+            q=q.split(',')
+            for s in q:
+                temp.append(s)
+    return temp
+
+
+def gen_property(df):
+    predict_property = df['predict_category_property'].map(lambda x: [v.split(':')[1:] for v in x.split(';')])
+    predict_property=predict_property.map(lambda x:correct_extract(x))
+    df['predict_property']=predict_property.map(lambda x:list(set(x)))
+    property_list = df['item_property_list'].map(lambda x: x.split(';'))
+    df['property_list'] = property_list.map(lambda x: list(set(x)))
+    return df
+
+dataset=gen_property(dataset)
+label=gen_property(label)
+
+
+def del_na(x):
+    temp=[]
+    for i in x:
+        if i!='-1':
+            temp.append(i)
+        else:continue
+    return temp
+
+dataset['predict_property']=dataset['predict_property'].apply(lambda x:del_na(x))
+dataset['property_list']=dataset['property_list'].apply(lambda x:del_na(x))
+
+label['predict_property']=label['predict_property'].apply(lambda x:del_na(x))
+label['property_list']=label['property_list'].apply(lambda x:del_na(x))
+
+
+
+def merge(x, y):
+    tmp = []
+    for i in range(len(x)):
+        for j in range(len(y)):
+            if x[i] in y[j]:
+                tmp.append(x[i])
+    return tmp
+
+
+def extract_category_property(df):
+    df['train_property_join'] = df['property_list'].combine(df['predict_property'], lambda x, y: merge(x, y))
+    df['train_property_join']=df['train_property_join'].map(lambda x:list(set(x)))
+    df['property_in_predict_rate']=df['train_property_join'].map(lambda x:len(x))/df['predict_property'].map(lambda x:max(len(x),1e-6))
+    df['property_in_predict_count']=df['train_property_join'].map(lambda x:len(x))
+    # df['1']=df['predict_property'].map(lambda x:len(x))
+    df=df.drop(['property_list','predict_property'],axis=1)
+    return df
+
+
+dataset=extract_category_property(dataset)
+label=extract_category_property(label)
+# print(label)
+
+dataset.to_csv('D:\\workspace\\alimama\\data\\dataSet1.csv',index=False)
+label.to_csv('D:\\workspace\\alimama\\data\\label1.csv',index=False)
+
+
