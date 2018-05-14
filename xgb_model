@@ -1,0 +1,97 @@
+# -*- coding:utf-8 -*-
+import pandas as pd
+import xgboost as xgb
+from sklearn.preprocessing import MinMaxScaler
+from sklearn import preprocessing
+import  numpy as np
+from sklearn.feature_extraction import DictVectorizer
+
+
+
+dataset1 = pd.read_csv('D:\\workspace\\alimama\\data\\time_feature1.csv')
+dataset2 = pd.read_csv('D:\\workspace\\alimama\\data\\time_feature2.csv')
+dataset3 = pd.read_csv('D:\\workspace\\alimama\\data\\time_feature3.csv')
+dataset4 = pd.read_csv('D:\\workspace\\alimama\\data\\time_feature4.csv')
+
+# print(dataset4.info())
+# print(dataset2)
+# print(dataset3.dtypes)
+
+dataset12 = pd.concat([dataset1, dataset2], axis=0)
+# dataset24 = pd.concat([dataset2, dataset4], axis=0)
+dataset124 = pd.concat([dataset1,dataset2,dataset4], axis=0)
+# print(dataset12.info())
+# print(dataset2.info())
+
+dataset1_y = dataset1.is_trade
+dataset1_x = dataset1.drop(['instance_id','is_trade','item_id','user_id','context_id','shop_id','item_brand_id','item_city_id','user_gender_id','user_occupation_id','context_timestamp','context_page_id','day'],axis=1)
+
+dataset2_y = dataset2.is_trade
+dataset2_x = dataset2.drop(['instance_id','is_trade','item_id','user_id','context_id','shop_id','item_brand_id','item_city_id','user_gender_id','user_occupation_id','context_timestamp','context_page_id','day'],axis=1)
+dataset4_y = dataset4.is_trade
+
+dataset4_x = dataset4.drop( ['instance_id','is_trade','item_id','user_id','context_id','shop_id','item_brand_id','item_city_id','user_gender_id','user_occupation_id','context_timestamp','context_page_id','day'],axis=1)
+dataset12_y = dataset12.is_trade
+dataset12_x = dataset12.drop(['instance_id','is_trade','item_id','user_id','context_id','shop_id','item_brand_id','item_city_id','user_gender_id','user_occupation_id','context_timestamp','context_page_id','day'],axis=1)
+dataset124_y = dataset124.is_trade
+dataset124_x = dataset124.drop(['instance_id','is_trade','item_id','user_id','context_id','shop_id','item_brand_id','item_city_id','user_gender_id','user_occupation_id','context_timestamp','context_page_id','day'],axis=1)
+dataset3_preds=dataset3[['instance_id']]
+dataset3_x = dataset3.drop(['instance_id','item_id','user_id','context_id','shop_id','item_brand_id','item_city_id','user_gender_id','user_occupation_id','context_timestamp','context_page_id','day'],axis=1)
+print(dataset1_x.shape, dataset2_x.shape, dataset3_x.shape,dataset4_x.shape)
+
+
+
+#转类型
+
+dataset1 = xgb.DMatrix(dataset1_x, label=dataset1_y)
+dataset2 = xgb.DMatrix(dataset2_x, label=dataset2_y)
+dataset4 = xgb.DMatrix(dataset4_x, label=dataset4_y)
+dataset124 = xgb.DMatrix(dataset124_x, label=dataset124_y)
+dataset12 = xgb.DMatrix(dataset12_x, label=dataset12_y)
+dataset3 = xgb.DMatrix(dataset3_x)
+
+
+
+
+params = {'booster': 'gbtree',
+          'objective': 'binary:logistic',
+          'eval_metric': 'logloss',
+          'gamma': 0.1,
+          'min_child_weight': 1,
+          'max_depth': 5,
+          'lambda': 20,
+          'subsample': 0.7,
+          'colsample_bytree': 0.7,
+          'colsample_bylevel': 0.7,
+          'eta': 0.01,
+          'tree_method': 'exact',
+          'seed': 0,
+          'nthread': -1,
+          'scale_pos_weight':1
+          }
+
+# train on dataset1, evaluate on dataset2  [946]	train-logloss:0.074207	val-logloss:0.079958
+watchlist = [(dataset12,'train'),(dataset4,'val')]  #train-logloss:0.074425	val-logloss:0.080006
+model = xgb.train(params,dataset12,num_boost_round=2000,evals=watchlist,early_stopping_rounds=300)
+
+# watchlist = [(dataset124, 'train')]
+# model = xgb.train(params, dataset124, num_boost_round=1800, evals=watchlist)
+
+# predict test set
+
+dataset3_preds['is_trade'] = model.predict(dataset3)
+# dataset3_preds.predicted_score = MinMaxScaler().fit_transform(dataset3_preds.is_trade.reshape(-1, 1))
+dataset3_preds.sort_values(by=['instance_id', 'is_trade'], inplace=True)
+dataset3_preds.to_csv("D:\\workspace\\alimama\\xgb_preds1.csv", index=None, header=None)
+print(dataset3_preds.describe())
+
+# save feature score
+feature_score = model.get_fscore()
+feature_score = sorted(feature_score.items(), key=lambda x: x[1], reverse=True)
+fs = []
+for (key, value) in feature_score:
+    fs.append("{0},{1}\n".format(key, value))
+
+with open('D:\\workspace\\alimama\\xgb_feature_score17.csv', 'w') as f:
+    f.writelines("feature,score\n")
+    f.writelines(fs)
