@@ -1,0 +1,54 @@
+# -*- coding:utf-8 -*-
+import numpy as np
+import pandas as pd
+# dataset=pd.read_csv('D:\\workspace\\alimama\\data\\dataSet4.csv')
+label=pd.read_csv('D:\\workspace\\alimama\\data\\label5.csv')
+temp=label[['shop_id']].copy()
+temp['shop_cnt']=1
+temp=temp.groupby('shop_id')['shop_cnt'].agg('sum').reset_index()
+label=pd.merge(label,temp,on='shop_id',how='left')
+
+temp=label[['item_id']].copy()
+temp['item_cnt']=1
+temp=temp.groupby('item_id')['item_cnt'].agg('sum').reset_index()
+label=pd.merge(label,temp,on='item_id',how='left')
+
+temp=label[['item_brand_id']].copy()
+temp['item_brand_cnt']=1
+temp=temp.groupby('item_brand_id')['item_brand_cnt'].agg('sum').reset_index()
+label=pd.merge(label,temp,on='item_brand_id',how='left')
+
+temp=label[['item_city_id']].copy()
+temp['item_city_cnt']=1
+temp=temp.groupby('item_city_id')['item_city_cnt'].agg('sum').reset_index()
+label=pd.merge(label,temp,on='item_city_id',how='left')
+
+temp=label[['user_id','item_id']].drop_duplicates()[['user_id']]
+temp['ui_cnt']=1
+temp=temp.groupby('user_id').agg('sum').reset_index()
+label=pd.merge(label,temp,on='user_id',how='left')
+
+temp=label[['user_id','shop_id']].drop_duplicates()[['user_id']]
+temp['us_cnt']=1
+temp=temp.groupby('user_id').agg('sum').reset_index()
+label=pd.merge(label,temp,on='user_id',how='left')
+
+temp=label[['user_id','category_join_second']].drop_duplicates()[['user_id']]
+temp['uca_cnt']=1
+temp=temp.groupby('user_id').agg('sum').reset_index()
+label=pd.merge(label,temp,on='user_id',how='left')
+
+temp=label[['user_id','item_brand_id']].drop_duplicates()[['user_id']]
+temp['ub_cnt']=1
+temp=temp.groupby('user_id').agg('sum').reset_index()
+label=pd.merge(label,temp,on='user_id',how='left')
+
+temp=label[['user_id','item_city_id']].drop_duplicates()[['user_id']]
+temp['uci_cnt']=1
+temp=temp.groupby('user_id').agg('sum').reset_index()
+label=pd.merge(label,temp,on='user_id',how='left')
+
+
+# print(label)
+
+label.to_csv('D:\\workspace\\alimama\\data\\label5.csv',index=False)
