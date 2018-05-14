@@ -1,0 +1,25 @@
+import pandas as pd
+import numpy as np
+
+'''
+离散化shop下的一些连续值
+'''
+
+dataset1=pd.read_csv('D:\\workspace\\alimama\\data\\dataSet1.csv')
+label1=pd.read_csv('D:\\workspace\\alimama\\data\\label1.csv')
+
+def fenduan(df):
+    df=pd.cut(df,25,labels=[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25])
+    return df
+
+dataset1.shop_score_delivery=fenduan(dataset1.shop_score_delivery)
+label1.shop_score_delivery=fenduan(label1.shop_score_delivery)
+dataset1.shop_review_positive_rate=fenduan(dataset1.shop_review_positive_rate)
+label1.shop_review_positive_rate=fenduan(label1.shop_review_positive_rate)
+dataset1.shop_score_service=fenduan(dataset1.shop_score_service)
+label1.shop_score_service=fenduan(label1.shop_score_service)
+dataset1.shop_score_description=fenduan(dataset1.shop_score_description)
+label1.shop_score_description=fenduan(label1.shop_score_description)
+
+dataset1.to_csv('D:\\workspace\\alimama\\data\\dataSet1.csv',index=False)
+label1.to_csv('D:\\workspace\\alimama\\data\\label1.csv',index=False)
