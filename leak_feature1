@@ -1,0 +1,150 @@
+# -*- coding:utf-8 -*-
+import numpy as np
+import pandas as pd
+# dataset=pd.read_csv('D:\\workspace\\alimama\\data\\dataSet1.csv')
+label=pd.read_csv('D:\\workspace\\alimama\\data\\label1.csv')
+
+# print(label.info())
+temp=label[['user_id','context_timestamp','instance_id']].copy()
+# temp=temp.drop_duplicates()
+# temp=temp.drop_duplicates(subset='instance_id')
+#每个用户(广告)当天有多少条记录：
+temp['u_rk']=temp.groupby('user_id')['context_timestamp'].rank(method='first',ascending=True)
+this_day_record=temp.groupby('user_id')['u_rk'].max().reset_index()
+this_day_record.rename(columns={'u_rk':'u_record'},inplace=True)
+temp=pd.merge(temp,this_day_record,on='user_id',how='left')
+
+temp.context_timestamp = temp.context_timestamp.apply(lambda x: x % 100 + x % 10000 / 100 * 60 + x % 1000000 / 10000 * 3600)
+temp['preClickTimeDiff'] = temp.groupby('user_id')['context_timestamp'].apply(pd.Series.diff)
+temp['nextClickTimeDiff'] = temp.groupby('user_id')['preClickTimeDiff'].apply(lambda x: x.shift(-1))
+temp.preClickTimeDiff.fillna(-1,inplace=True)
+temp.nextClickTimeDiff.fillna(-1,inplace=True)
+temp['isDuplicate'] = temp.preClickTimeDiff * temp.nextClickTimeDiff
+temp.isDuplicate = temp.isDuplicate==0
+
+temp['preClickTimeDiff_minute'] = temp.preClickTimeDiff.apply(lambda x: int(x)/60)
+temp['nextClickTimeDiff_minute'] = temp.nextClickTimeDiff.apply(lambda x: int(x)/60)
+temp['isDuplicate_minute'] = temp.preClickTimeDiff_minute * temp.nextClickTimeDiff_minute
+temp.isDuplicate_minute = temp.isDuplicate_minute==0
+
+label = pd.merge(label, temp[['instance_id', 'u_rk', 'u_record', 'preClickTimeDiff', 'nextClickTimeDiff', 'preClickTimeDiff_minute',
+                                      'nextClickTimeDiff_minute', 'isDuplicate','isDuplicate_minute']], on='instance_id', how='left')
+
+del (this_day_record, temp)
+
+
+# user当天对creativeID有多少条记录，每条记录为当天该user第几条；与上一条的时间差； 与下一条的时间差；是否为重复记录；
+temp = label[['user_id', 'item_id', 'context_timestamp', 'instance_id']].copy()
+
+temp['ui_rk'] = temp.groupby(['user_id', 'item_id'])['context_timestamp'].rank(method='first', ascending=True)
+this_day_record = temp.groupby(['user_id', 'item_id'])['ui_rk'].max().reset_index()
+this_day_record.rename(columns={'ui_rk': 'ui_record'}, inplace=True)
+temp = pd.merge(temp, this_day_record, on=['user_id', 'item_id'], how='left')
+
+temp.context_timestamp = temp.context_timestamp.apply(lambda x: x % 100 + x % 10000 / 100 * 60 + x % 1000000 / 10000 * 3600)
+temp['ui_preClickTimeDiff'] = temp.groupby(['user_id', 'item_id'])['context_timestamp'].apply(pd.Series.diff)
+temp['ui_nextClickTimeDiff'] = temp.groupby(['user_id', 'item_id'])['ui_preClickTimeDiff'].apply(lambda x: x.shift(-1))
+temp.ui_preClickTimeDiff.fillna(-1,inplace=True)
+temp.ui_nextClickTimeDiff.fillna(-1,inplace=True)
+temp['ui_isDuplicate'] = temp.ui_preClickTimeDiff * temp.ui_nextClickTimeDiff
+temp.ui_isDuplicate = temp.ui_isDuplicate==0
+
+temp['ui_preClickTimeDiff_minute'] = temp.ui_preClickTimeDiff.apply(lambda x: int(x)/60)
+temp['ui_nextClickTimeDiff_minute'] = temp.ui_nextClickTimeDiff.apply(lambda x: int(x)/60)
+temp['ui_isDuplicate_minute'] = temp.ui_preClickTimeDiff_minute * temp.ui_nextClickTimeDiff_minute
+temp.ui_isDuplicate_minute = temp.ui_isDuplicate_minute==0
+
+label = pd.merge(label, temp[['instance_id', 'ui_rk', 'ui_record', 'ui_preClickTimeDiff', 'ui_nextClickTimeDiff','ui_preClickTimeDiff_minute',
+                                      'ui_nextClickTimeDiff_minute', 'ui_isDuplicate', 'ui_isDuplicate_minute']], on='instance_id', how='left')
+
+del (this_day_record, temp)
+
+
+#与shop——id：
+temp = label[['user_id', 'shop_id', 'context_timestamp', 'instance_id']].copy()
+
+temp['us_rk'] = temp.groupby(['user_id', 'shop_id'])['context_timestamp'].rank(method='first', ascending=True)
+this_day_record = temp.groupby(['user_id', 'shop_id'])['us_rk'].max().reset_index()
+this_day_record.rename(columns={'us_rk': 'us_record'}, inplace=True)
+temp = pd.merge(temp, this_day_record, on=['user_id', 'shop_id'], how='left')
+
+temp.context_timestamp = temp.context_timestamp.apply(lambda x: x % 100 + x % 10000 / 100 * 60 + x % 1000000 / 10000 * 3600)
+temp['us_preClickTimeDiff'] = temp.groupby(['user_id', 'shop_id'])['context_timestamp'].apply(pd.Series.diff)
+temp['us_nextClickTimeDiff'] = temp.groupby(['user_id', 'shop_id'])['us_preClickTimeDiff'].apply(lambda x: x.shift(-1))
+temp.us_preClickTimeDiff.fillna(-1,inplace=True)
+temp.us_nextClickTimeDiff.fillna(-1,inplace=True)
+temp['us_isDuplicate'] = temp.us_preClickTimeDiff * temp.us_nextClickTimeDiff
+temp.us_isDuplicate = temp.us_isDuplicate==0
+
+temp['us_preClickTimeDiff_minute'] = temp.us_preClickTimeDiff.apply(lambda x: int(x)/60)
+temp['us_nextClickTimeDiff_minute'] = temp.us_nextClickTimeDiff.apply(lambda x: int(x)/60)
+temp['us_isDuplicate_minute'] = temp.us_preClickTimeDiff_minute * temp.us_nextClickTimeDiff_minute
+temp.us_isDuplicate_minute = temp.us_isDuplicate_minute==0
+
+label = pd.merge(label, temp[['instance_id', 'us_rk', 'us_record', 'us_preClickTimeDiff', 'us_nextClickTimeDiff','us_preClickTimeDiff_minute',
+                                      'us_nextClickTimeDiff_minute', 'us_isDuplicate', 'us_isDuplicate_minute']], on='instance_id', how='left')
+
+del (this_day_record, temp)
+
+
+#与item_brand_id
+temp = label[['user_id', 'item_brand_id', 'context_timestamp', 'instance_id']].copy()
+
+temp['ub_rk'] = temp.groupby(['user_id', 'item_brand_id'])['context_timestamp'].rank(method='first', ascending=True)
+this_day_record = temp.groupby(['user_id', 'item_brand_id'])['ub_rk'].max().reset_index()
+this_day_record.rename(columns={'ub_rk': 'ub_record'}, inplace=True)
+temp = pd.merge(temp, this_day_record, on=['user_id', 'item_brand_id'], how='left')
+
+temp.context_timestamp = temp.context_timestamp.apply(lambda x: x % 100 + x % 10000 / 100 * 60 + x % 1000000 / 10000 * 3600)
+temp['ub_preClickTimeDiff'] = temp.groupby(['user_id', 'item_brand_id'])['context_timestamp'].apply(pd.Series.diff)
+temp['ub_nextClickTimeDiff'] = temp.groupby(['user_id', 'item_brand_id'])['ub_preClickTimeDiff'].apply(lambda x: x.shift(-1))
+temp.ub_preClickTimeDiff.fillna(-1,inplace=True)
+temp.ub_nextClickTimeDiff.fillna(-1,inplace=True)
+temp['ub_isDuplicate'] = temp.ub_preClickTimeDiff * temp.ub_nextClickTimeDiff
+temp.ub_isDuplicate = temp.ub_isDuplicate==0
+
+temp['ub_preClickTimeDiff_minute'] = temp.ub_preClickTimeDiff.apply(lambda x: int(x)/60)
+temp['ub_nextClickTimeDiff_minute'] = temp.ub_nextClickTimeDiff.apply(lambda x: int(x)/60)
+temp['ub_isDuplicate_minute'] = temp.ub_preClickTimeDiff_minute * temp.ub_nextClickTimeDiff_minute
+temp.ub_isDuplicate_minute = temp.ub_isDuplicate_minute==0
+
+label = pd.merge(label, temp[['instance_id', 'ub_rk', 'ub_record', 'ub_preClickTimeDiff', 'ub_nextClickTimeDiff','ub_preClickTimeDiff_minute',
+                                      'ub_nextClickTimeDiff_minute', 'ub_isDuplicate', 'ub_isDuplicate_minute']], on='instance_id', how='left')
+
+del (this_day_record, temp)
+
+
+#对不同种类：
+temp = label[['user_id', 'category_join_second', 'context_timestamp', 'instance_id']].copy()
+
+temp['uca_rk'] = temp.groupby(['user_id', 'category_join_second'])['context_timestamp'].rank(method='first', ascending=True)
+this_day_record = temp.groupby(['user_id', 'category_join_second'])['uca_rk'].max().reset_index()
+this_day_record.rename(columns={'uca_rk': 'uca_record'}, inplace=True)
+temp = pd.merge(temp, this_day_record, on=['user_id', 'category_join_second'], how='left')
+
+temp.context_timestamp = temp.context_timestamp.apply(lambda x: x % 100 + x % 10000 / 100 * 60 + x % 1000000 / 10000 * 3600)
+temp['uca_preClickTimeDiff'] = temp.groupby(['user_id', 'category_join_second'])['context_timestamp'].apply(pd.Series.diff)
+temp['uca_nextClickTimeDiff'] = temp.groupby(['user_id', 'category_join_second'])['uca_preClickTimeDiff'].apply(lambda x: x.shift(-1))
+temp.uca_preClickTimeDiff.fillna(-1,inplace=True)
+temp.uca_nextClickTimeDiff.fillna(-1,inplace=True)
+temp['uca_isDuplicate'] = temp.uca_preClickTimeDiff * temp.uca_nextClickTimeDiff
+temp.uca_isDuplicate = temp.uca_isDuplicate==0
+
+temp['uca_preClickTimeDiff_minute'] = temp.uca_preClickTimeDiff.apply(lambda x: int(x)/60)
+temp['uca_nextClickTimeDiff_minute'] = temp.uca_nextClickTimeDiff.apply(lambda x: int(x)/60)
+temp['uca_isDuplicate_minute'] = temp.uca_preClickTimeDiff_minute * temp.uca_nextClickTimeDiff_minute
+temp.uca_isDuplicate_minute = temp.uca_isDuplicate_minute==0
+
+label = pd.merge(label, temp[['instance_id', 'uca_rk', 'uca_record', 'uca_preClickTimeDiff', 'uca_nextClickTimeDiff','uca_preClickTimeDiff_minute',
+                                      'uca_nextClickTimeDiff_minute', 'uca_isDuplicate', 'uca_isDuplicate_minute']], on='instance_id', how='left')
+
+del (this_day_record, temp)
+
+
+# print(label.info())
+
+label.to_csv('D:\\workspace\\alimama\\data\\label1.csv',index=False)
+
+
+
+
