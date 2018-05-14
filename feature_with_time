@@ -1,0 +1,256 @@
+# -*- coding:utf-8 -*-
+import numpy as np
+import pandas as pd
+
+dataset=pd.read_csv('D:\\workspace\\alimama\\data\\dataSet1.csv')
+label=pd.read_csv('D:\\workspace\\alimama\\data\\label1.csv')
+
+'''
+先注释掉特征选择部分代码送进xgb运行一遍
+在去掉注释进行特征选择
+'''
+
+
+# Feature_importance = 'D:\\workspace\\alimama\\xgb_feature_score10.csv'
+Feature_end=dataset.day.max()
+
+# feat = list(pd.read_csv(Feature_importance).feature)[:374]
+# feature_select = []
+# for f in feat:
+#     if ("mean" in f) or ("max" in f) or ("min" in f):
+#         feature_select.append("_".join(f.split("_")[:-1]))
+
+
+
+
+
+feat = ['user_id','item_id','shop_id','item_brand_id', 'item_city_id', 'item_price_level', 'item_sales_level', 'item_collected_level', 'item_pv_level',
+        'user_gender_id', 'user_age_level', 'user_occupation_id', 'user_star_level','category_join_second','category_join_third',
+        'context_page_id', 'shop_review_num_level','shop_review_positive_rate','shop_score_service','shop_score_delivery','shop_score_description',  'shop_star_level', 'property_in_predict_count','category_in_predict_count']
+
+for f in feat:
+    f_cvr = f + "_cvr"
+    # if f_cvr not in feature_select:
+    #     continue
+
+    # 每天单独算
+    temp = dataset[[f, 'day', 'is_trade']].copy()
+    temp['cnt'] = 1
+    temp = temp.groupby([f, 'day']).agg('sum').reset_index()
+    temp[f_cvr] = temp.is_trade / temp.cnt.astype(float)
+    temp = temp[[f, 'day', f_cvr]]
+    cvr_min = temp.groupby(f)[f_cvr].agg('min')
+    cvr_max = temp.groupby(f)[f_cvr].agg('max')
+    cvr_min = cvr_min.reset_index()
+    cvr_max = cvr_max.reset_index()
+    cvr_min.rename(columns={f_cvr: f_cvr + '_min'}, inplace=True)
+    cvr_max.rename(columns={f_cvr: f_cvr + '_max'}, inplace=True)
+
+    # 全局cvr
+    temp = dataset[[f, 'is_trade']].copy()
+    temp['cnt'] = 1
+    temp = temp.groupby(f).agg('sum').reset_index()
+    temp[f_cvr + "_avg"] = temp.is_trade / temp.cnt.astype(float)
+    cvr_avg = temp[[f, f_cvr + "_avg"]]
+
+    temp = pd.merge(cvr_min, cvr_max, on=f)
+    temp = pd.merge(temp, cvr_avg, on=f)
+
+    label = pd.merge(label, temp, on=f, how='left')
+
+# 单特征预测窗口前2天的cvr
+for f in feat:
+    f_cvr = f + "_cvr"
+    # if f_cvr not in feature_select:
+    #     continue
+
+    temp = dataset[dataset.day >= Feature_end - 2][[f, 'is_trade']].copy()
+    temp['cnt'] = 1
+    temp = temp.groupby(f).agg('sum').reset_index()
+    temp[f_cvr + "_avg_pre2"] = temp.is_trade / temp.cnt.astype(float)
+    cvr_avg = temp[[f, f_cvr + "_avg_pre2"]]
+
+    label = pd.merge(label, cvr_avg, on=f, how='left')
+
+# 单特征预测窗口前1天的cvr
+for f in feat:
+    f_cvr = f + "_cvr"
+    # if f_cvr not in feature_select:
+    #     continue
+
+    temp = dataset[dataset.day >=Feature_end-1][[f, 'is_trade']].copy()
+    temp['cnt'] = 1
+    temp = temp.groupby(f).agg('sum').reset_index()
+    temp[f_cvr + "_avg_pre1"] = temp.is_trade / temp.cnt.astype(float)
+    cvr_avg = temp[[f, f_cvr + "_avg_pre1"]]
+
+    label = pd.merge(label, cvr_avg, on=f, how='left')
+
+# 组合转化率特征
+
+
+# feat1=['user_id','user_gender_id','user_age_level','user_occupation_id','user_star_level']
+# feat2=['item_id','item_brand_id','item_city_id','item_price_level','item_sales_level','item_collected_level','item_pv_level','context_page_id','category_join_second','category_join_third','shop_id','shop_review_num_level','shop_star_level','shop_review_positive_rate','shop_star_level','shop_score_service','shop_score_delivery','shop_score_description','category_in_predict_count','property_in_predict_count']
+feat1=['item_id','item_brand_id','item_city_id','item_price_level','item_sales_level','item_collected_level','item_pv_level','category_join_second','category_join_third', 'property_in_predict_count','category_in_predict_count','user_gender_id','user_age_level','user_occupation_id','user_star_level','user_id']
+feat2=['context_page_id','shop_id','shop_star_level','shop_review_num_level','shop_review_positive_rate','shop_score_service','shop_score_delivery','shop_score_description']
+
+
+
+
+for i in range(len(feat1)):
+    for j in range(i + 1, len(feat1)):
+        f1, f2 = feat1[i], feat1[j]
+        cvr_name = f1 + '_' + f2 + '_cvr'
+
+        # if cvr_name not in feature_select:
+        #     continue
+
+        # 每天单独算
+        temp = dataset[[f1, f2, 'day', 'is_trade']].copy()
+        temp['cnt'] = 1
+        temp = temp.groupby([f1, f2, 'day']).agg('sum').reset_index()
+        temp[cvr_name] = temp.is_trade / temp.cnt.astype(float)
+        temp = temp[[f1, f2, 'day', cvr_name]]
+        cvr_min = temp.groupby([f1, f2])[cvr_name].agg('min')
+        cvr_max = temp.groupby([f1, f2])[cvr_name].agg('max')
+        cvr_min = cvr_min.reset_index()
+        cvr_max = cvr_max.reset_index()
+        cvr_min.rename(columns={cvr_name: cvr_name + '_min'}, inplace=True)
+        cvr_max.rename(columns={cvr_name: cvr_name + '_max'}, inplace=True)
+
+        # 全局cvr
+        temp = dataset[[f1, f2, 'is_trade']].copy()
+        temp['cnt'] = 1
+        temp = temp.groupby([f1, f2]).agg('sum').reset_index()
+        temp[cvr_name + "_avg"] = temp.is_trade / temp.cnt.astype(float)
+        cvr_avg = temp[[f1, f2, cvr_name + "_avg"]]
+
+        temp = pd.merge(cvr_min, cvr_max, on=[f1, f2])
+        temp = pd.merge(temp, cvr_avg, on=[f1, f2])
+
+        label = pd.merge(label, temp, on=[f1, f2], how='left')
+
+for i in range(len(feat1)):
+    for j in range(len(feat2)):
+        f1, f2 = feat1[i], feat2[j]
+        cvr_name = f1 + '_' + f2 + '_cvr'
+
+        # if cvr_name not in feature_select:
+        #     continue
+
+        # 每天单独算
+        temp = dataset[[f1, f2, 'day', 'is_trade']].copy()
+        temp['cnt'] = 1
+        temp = temp.groupby([f1, f2, 'day']).agg('sum').reset_index()
+        temp[cvr_name] = temp.is_trade / temp.cnt.astype(float)
+        temp = temp[[f1, f2, 'day', cvr_name]]
+        cvr_min = temp.groupby([f1, f2])[cvr_name].agg('min')
+        cvr_max = temp.groupby([f1, f2])[cvr_name].agg('max')
+        cvr_min = cvr_min.reset_index()
+        cvr_max = cvr_max.reset_index()
+        cvr_min.rename(columns={cvr_name: cvr_name + '_min'}, inplace=True)
+        cvr_max.rename(columns={cvr_name: cvr_name + '_max'}, inplace=True)
+
+        # 全局cvr
+        temp = dataset[[f1, f2, 'is_trade']].copy()
+        temp['cnt'] = 1
+        temp = temp.groupby([f1, f2]).agg('sum').reset_index()
+        temp[cvr_name + "_avg"] = temp.is_trade / temp.cnt.astype(float)
+        cvr_avg = temp[[f1, f2, cvr_name + "_avg"]]
+
+        temp = pd.merge(cvr_min, cvr_max, on=[f1, f2])
+        temp = pd.merge(temp, cvr_avg, on=[f1, f2])
+
+        label = pd.merge(label, temp, on=[f1, f2], how='left')
+
+# 组合特征预测窗口前2天的cvr
+for i in range(len(feat1)):
+    for j in range(len(feat2)):
+        f1, f2 = feat1[i], feat2[j]
+        cvr_name = f1 + '_' + f2 + '_cvr'
+
+        # if cvr_name not in feature_select:
+        #     continue
+
+
+        temp = dataset[dataset.day >= Feature_end - 1][[f1, f2, 'is_trade']].copy()
+        temp['cnt'] = 1
+        temp = temp.groupby([f1, f2]).agg('sum').reset_index()
+        temp[cvr_name + "_avg_pre2"] = temp.is_trade / temp.cnt.astype(float)
+        cvr_avg = temp[[f1, f2, cvr_name + "_avg_pre2"]]
+
+        label = pd.merge(label, cvr_avg, on=[f1, f2], how='left')
+
+# print(label.info())
+# print(label)
+
+
+Feature_end=dataset.day.max()
+Label_day=label.day.max()
+
+# user在DataFeature中的活跃天数
+temp = dataset[['user_id', 'day']].drop_duplicates()[['user_id']]
+temp['u_active_day'] = 1
+temp = temp.groupby('user_id')['u_active_day'].agg('sum').reset_index()
+label = pd.merge(label, temp, on='user_id', how='left')
+label.u_active_day.fillna(0, inplace=True)
+
+# user在DataFeature中的点击次数
+temp = dataset[['user_id']].copy()
+temp['u_active_cnt'] = 1
+temp = temp.groupby('user_id')['u_active_cnt'].agg('sum').reset_index()
+label = pd.merge(label, temp, on='user_id', how='left')
+label.u_active_cnt.fillna(0, inplace=True)
+# print(label)
+
+# user在DataFeature中的激活次数
+temp = dataset[['user_id', 'is_trade']].copy()
+temp.rename(columns={'is_trade': 'u_install_cnt'}, inplace=True)
+temp = temp.groupby('user_id')['u_install_cnt'].agg('sum').reset_index()
+label = pd.merge(label, temp, on='user_id', how='left')
+label.u_install_cnt.fillna(0, inplace=True)
+
+# user在DataFeature中的未激活次数
+label['u_not_install_cnt'] = label.u_active_cnt - label.u_install_cnt
+
+# user在DataFeature中点击多少不同app广告
+temp = dataset[['user_id', 'item_id']].drop_duplicates()[['user_id']]
+temp['u_app_cnt'] = 1
+temp = temp.groupby('user_id')['u_app_cnt'].agg('sum').reset_index()
+label = pd.merge(label, temp, on='user_id', how='left')
+label.u_app_cnt.fillna(0, inplace=True)
+
+# user在DataFeature中激活多少不同app广告
+temp = dataset[dataset.is_trade==1][['user_id', 'item_id']].drop_duplicates()[['user_id']]
+temp['u_app_install_cnt'] = 1
+temp = temp.groupby('user_id')['u_app_install_cnt'].agg('sum').reset_index()
+label = pd.merge(label, temp, on='user_id', how='left')
+label.u_app_install_cnt.fillna(0, inplace=True)
+
+# user在DataFeature最后一天的激活数
+temp = dataset[(dataset.day==Feature_end) & (dataset.is_trade==1)][['user_id']].copy()
+temp['u_lastday_cvt'] = 1
+temp = temp.groupby('user_id')['u_lastday_cvt'].agg('sum').reset_index()
+label = pd.merge(label, temp, on='user_id', how='left')
+label.u_lastday_cvt.fillna(0, inplace=True)
+
+# user距离上一次激活多少分钟
+temp = dataset[dataset.is_trade==1][['user_id', 'context_timestamp']].copy()
+idx = temp.groupby(['user_id'])['context_timestamp'].transform(max) == temp['context_timestamp']
+temp = temp[idx].drop_duplicates()
+temp.rename(columns={'context_timestamp': 'last_cvt_time'}, inplace=True)
+label = pd.merge(label, temp, on='user_id', how='left')
+label.last_cvt_time.fillna((Label_day+2)*1000000, inplace=True)
+
+cvtDate = lambda x: ((int(x)/1000000 - 17)*24 + int(x)%1000000/10000)*60 + int(x)%10000/100
+label['last_cvt_gap'] = label.context_timestamp.apply(cvtDate) - label.last_cvt_time.apply(cvtDate)
+label.last_cvt_gap = label.last_cvt_gap.apply(lambda x: -1 if x<0 else x)
+label.drop('last_cvt_time', axis=1, inplace=True)
+
+
+
+# print(label)
+
+label.to_csv('D:\\workspace\\alimama\\data\\time_feature1.csv',index=False)
+
+
