@@ -1,0 +1,64 @@
+# -*- coding:utf-8 -*-
+
+import pandas as pd
+dataset=pd.read_csv('data/dataSet1.csv')
+label=pd.read_csv('data/label1.csv')
+'''
+每次将dataset1依次改成dataset2，3，4，5.。。。label也一样
+作用：清洗商品所属类型并与用户查找类型做交集
+'''
+
+def gen_category(df):
+    predict_category = df['predict_category_property'].map(lambda x: [v.split(':')[0] for v in x.split(';')])
+    df['predict_category']=predict_category.map(lambda x:list(set(x)))
+    category_list = df['item_category_list'].map(lambda x: x.split(';'))
+    df['category_list'] = category_list.map(lambda x: list(set(x)))
+    return df
+
+dataset=gen_category(dataset)
+label=gen_category(label)
+
+
+def del_na(x):
+    temp=[]
+    for i in x:
+        if i!='-1':
+            temp.append(i)
+        else:continue
+    return temp
+
+dataset['predict_category']=dataset['predict_category'].apply(lambda x:del_na(x))
+dataset['category_list']=dataset['category_list'].apply(lambda x:del_na(x))
+
+label['predict_category']=label['predict_category'].apply(lambda x:del_na(x))
+label['category_list']=label['category_list'].apply(lambda x:del_na(x))
+
+
+
+def merge(x, y):
+    tmp = []
+    for i in range(len(x)):
+        for j in range(len(y)):
+            if x[i] in y[j]:
+                tmp.append(x[i])
+    return tmp
+
+
+def extract_category_property(df):
+    df['train_category_join'] = df['category_list'].combine(df['predict_category'], lambda x, y: merge(x, y))
+    df['train_category_join']=df['train_category_join'].map(lambda x:list(set(x)))
+    df['category_in_predict_rate']=df['train_category_join'].map(lambda x:len(x))/df['predict_category'].map(lambda x:max(len(x),1e-6))
+    df['category_in_predict_count']=df['train_category_join'].map(lambda x:len(x))
+    # df['1']=df['predict_category'].map(lambda x:len(x))
+    df=df.drop(['category_list','train_category_join','predict_category'],axis=1)
+    return df
+
+
+dataset=extract_category_property(dataset)
+label=extract_category_property(label)
+# print(label)
+
+dataset.to_csv('data/dataSet1.csv',index=False)
+label.to_csv('data/label1.csv',index=False)
+
+
